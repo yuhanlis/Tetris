@@ -64,9 +64,8 @@ char* sharedMem = NULL;//A共享内存指针
 
 
 //游戏逻辑所需变量
-unsigned int SnakeA[10][3];
-unsigned int SnakeB[10][3];
-unsigned int map[40][24];
+unsigned int mapA[15][22];
+unsigned int mapB[15][22];
 unsigned int directionA=3;  //0 shang 1 xia 2zuo 3you
 unsigned int directionB=3;
 
