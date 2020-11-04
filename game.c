@@ -1,54 +1,106 @@
 #include <stdio.h>
-#define HEIGH 27
-#define WEIGH 15
-#define CLK   1000  //降落速度
-
-#define SHAPE_L 0
-#define SHAPE_I 1
-#define SHAPE_O 2
-#define SHAPE_S 3
-#define SHAPE_T 4
-
-#define DIR_UP 0;
-#define DIR_DO 1;
-#define DIR_LE 2;
-#define DIR_RE 3;
-
-
+#include "game.h"
 unsigned int mapA [HEIGH][WEIGH];
 unsigned int mapB [HEIGH][WEIGH];
-unsigned int shape [5][2][4];
+unsigned int shape [7][4][4][4];
 
-
-shape [SHAPE_I]={
-                0,0,0,0,
-                1,1,1,1
-                };
-shape [SHAPE_L]={
-                0,0,0,1,
-                0,1,1,1
-                };
-shape [SHAPE_O]={
-                0,1,1,0,
-                0,1,1,0
-                };
-shape [SHAPE_S]={
-                0,1,1,0,
-                0,0,1,1
-                };
-shape [SHAPE_T]={
-                0,0,1,0,
-                0,1,1,1
-                };
+typedef    void (*pfunc_fall) (void);
+typedef    void (*pfunc_change)(void);
+typedef    void (*pfunc_move)(unsigned int dirt);
+typedef    unsigned int (*pfunc_iscollision)(unsigned int dirt);
+struct block;
+shape = 
+{
+    {
+    { { 0,1,1,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,0,0,0 },{ 1,1,0,0 },{ 0,1,0,0 },{ 0,0,0,0 } },
+    { { 0,1,1,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,0,0,0 },{ 1,1,0,0 },{ 0,1,0,0 },{ 0,0,0,0 } }
+    }
+    ,
+    {
+    { { 1,1,0,0 },{ 0,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 0,1,0,0 },{ 1,1,0,0 },{ 1,0,0,0 },{ 0,0,0,0 } },
+    { { 1,1,0,0 },{ 0,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 0,1,0,0 },{ 1,1,0,0 },{ 1,0,0,0 },{ 0,0,0,0 } }
+    }
+    ,
+    {
+    { { 1,1,1,0 },{ 1,0,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,0,0,0 },{ 1,0,0,0 },{ 1,1,0,0 },{ 0,0,0,0 } },
+    { { 0,0,1,0 },{ 1,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,1,0,0 },{ 0,1,0,0 },{ 0,1,0,0 },{ 0,0,0,0 } }
+    }
+    ,
+    {
+    { { 1,1,1,0 },{ 0,0,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,1,0,0 },{ 1,0,0,0 },{ 1,0,0,0 },{ 0,0,0,0 } },
+    { { 1,0,0,0 },{ 1,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 0,1,0,0 },{ 0,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 } }
+    }
+    ,
+    {
+    { { 1,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } }
+    }
+    ,
+    {
+    { { 0,1,0,0 },{ 1,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 0,1,0,0 },{ 1,1,0,0 },{ 0,1,0,0 },{ 0,0,0,0 } },
+    { { 1,1,1,0 },{ 0,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,0,0,0 },{ 1,1,0,0 },{ 1,0,0,0 },{ 0,0,0,0 } }
+    }
+    ,
+    {
+    { { 1,1,1,1 },{ 0,0,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,0,0,0 },{ 1,0,0,0 },{ 1,0,0,0 },{ 1,0,0,0 } },
+    { { 1,1,1,1 },{ 0,0,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
+    { { 1,0,0,0 },{ 1,0,0,0 },{ 1,0,0,0 },{ 1,0,0,0 } }
+    }
+    };
 
 struct block
 {
-    unsigned int shape[2][4];
+    unsigned int shape[4][4];
+    unsigned int status;
     unsigned int direction;
-    void (*down) (void);
-    
+    unsigned int addr[2];
+    pfunc_change change;
+    pfunc_fall fall;
+    pfunc_iscollision iscollision;
+    pfunc_move  move;
 };
 
+void my_move(unsigned int dir,struct block* pblock)
+{
+    if(pblock->iscollision(dir))
+    {
+        switch (dir)
+        {
+        case 0:
+            pblock->addr[0]-=1;
+            break;
+        case 1:
+            pblock->addr[0]+=1;
+            break;
+        default:
+            break;
+        }
+    }
+}
 
-void delay_ms(unsigned int t);
-void 
+void my_fall(struct block* pblock)
+{
+    if(pblock->iscollision(2))
+    {
+        pblock->addr[1]+=1;
+    }
+}
+
+void my_change(struct block* pblock)
+{
+
+}
+
