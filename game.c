@@ -1,6 +1,7 @@
 #include <stdio.h>
-#define HEIGH 22
+#define HEIGH 27
 #define WEIGH 15
+#define CLK   1000  //降落速度
 
 #define SHAPE_L 0
 #define SHAPE_I 1
