@@ -20,7 +20,7 @@
 #define DOWN 2;
 #define CHANG 3;
 
-void delay_ms(unsigned int time_ms);    //延时函数(毫秒)
+
 void init (unsigned int map[HEIGH][WIDTH]);       //初始化背景
 void fall(void);        //方块下降
 
