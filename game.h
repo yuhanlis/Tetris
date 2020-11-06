@@ -1,5 +1,5 @@
 #define HEIGH 27
-#define WEIGH 15
+#define WIDTH 15
 #define CLK   1000  //降落速度
 
 #define SHAPE_L1 2
@@ -18,7 +18,10 @@
 #define LEFT 0;
 #define RIGHT 1;
 #define DOWN 2;
+#define CHANG 3;
 
 void delay_ms(unsigned int time_ms);    //延时函数(毫秒)
-void init (unsigned int map[HEIGH][WEIGH]);       //初始化背景
+void init (unsigned int map[HEIGH][WIDTH]);       //初始化背景
 void fall(void);        //方块下降
+
+
