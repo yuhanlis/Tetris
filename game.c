@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include "game.h"
 #define HEIGH 27
 #define WIDTH 15
@@ -35,12 +37,12 @@ typedef    void (*pfunc_change)(MAP);       //旋转
 typedef    void (*pfunc_move)(struct map*,unsigned int );       //移动
 typedef    unsigned int (*pfunc_iscollision)(unsigned int,MAP);   //判断移动后是否会碰撞
 typedef    unsigned int (*pfunc_movtognd)(MAP);  //判断是否落到底
-typedef    void (*pfunc_clear)(MAP);        //消除行
+typedef    void (*pfunc_clearline)(unsigned int ,MAP);        //消除一行
 typedef    void (*pfunc_creatblk)(MAP);     //生成方块
 typedef    unsigned int (*pfunc_gameover)(MAP); //判断游戏是否结束
-typedef    unsigned int (*pfunc_isfull)(MAP);   //判断一行是否填满
+typedef    unsigned int (*pfunc_linestatus)(unsigned int,MAP);   //判断一行状态
 typedef    unsigned int (*pfunc_drawblk)(MAP);  //显示游戏中唯一的方块
-
+typedef    unsigned int (*pfunc_clearfulllines)(MAP);   //清除所有满行
 
 
 
@@ -113,29 +115,44 @@ struct map
     pfunc_iscollision iscollision;
     pfunc_move  move;
     pfunc_movtognd movtognd;
+
+
+
+
+    pfunc_creatblk creatblk;
+    pfunc_clearline clearline;
+    pfunc_linestatus linestatus;
+    pfunc_clearfulllines clearfulllines;
+    pfunc_drawblk drawblk;
+    pfunc_gameover isover;
+
 };
 
 struct block
 {
     unsigned int shape;
     unsigned int status;
-    unsigned int direction;
     unsigned int addr[2];
     
 };
 
-
-
+/**
+ * 
+ *方块下落函数 
+ * 
+ * */
 void my_fall(MAP m)
 {
-    if(!m->iscollision(2,m))
+    if(!m->movtognd(m))
     {
         m->blk->addr[1]+=1;
     }
 }
 
-
-
+/**
+ * 
+ * 改变方块形状
+ * */
 void my_change(MAP m)
 {
     if(!m->iscollision(3,m))
@@ -144,7 +161,10 @@ void my_change(MAP m)
     }
 }
 
-
+/**
+ * 
+ * 左右移动方块
+ * */
 void my_move(MAP m,unsigned int dir)
 {
     if(!m->iscollision(dir,m))
@@ -160,7 +180,11 @@ void my_move(MAP m,unsigned int dir)
     }
 }
 
-
+/**
+ * 
+ * 判断执行某操作后方块是否碰撞或越界
+ * 
+ * */
 unsigned int my_iscollection(MAP m,unsigned int act)
 {
     unsigned int x= m->blk->addr[0];
@@ -206,7 +230,9 @@ unsigned int my_iscollection(MAP m,unsigned int act)
     return res;
 }
 
-
+/**
+ * 判断方块是否落到底
+ * */
 unsigned int my_movtognd(MAP m)
 {
     unsigned int x= m->blk->addr[0];
@@ -230,6 +256,160 @@ unsigned int my_movtognd(MAP m)
     return res;
 }
 
+/**
+ * 
+ * 随机生成方块
+ * 
+ * */
+void my_creatblk(MAP m)
+{
+    unsigned int shape_random,status_random;    //随机数
+    BLOCK block_temp = (BLOCK)malloc(sizeof(struct block));
+    srand((unsigned int)time(NULL));
+    shape_random=rand()%7;
+    status_random=rand()%4;
+    block_temp->shape=shape_random;
+    block_temp->status=status_random;
+    block_temp->addr[0]=0;
+    block_temp->addr[1]=WIDTH/2;
+    m->blk=block_temp;
+}
+
+/**
+ * 消除某一满行
+ * */
+void my_clearline(unsigned int  line,MAP m)
+{
+    unsigned int i = line;
+    unsigned int j=0;
+    for(i;i-1>0&&m->linestatus(i,m)!=1;i--)
+    {
+        for(j=0;j<WIDTH;j++)
+        {
+            m->stage[i][j]=m->stage[i-1][j];
+        }
+    }
+}
+
+/**
+ * 
+ * 返回一行的状态
+ * 0空行
+ * 1满行
+ * 2不满不空
+ * 3行越界
+ * 
+ * */
+unsigned int  my_linestatus(unsigned int line,MAP m)
+{
+    unsigned int j =0 ;
+    unsigned int res = m->stage[line][0]==1;
+    if(line<0||line>=HEIGH)
+    return 3;
+    for(j=1;j<WIDTH;j++)
+    {
+        if(m->stage[line][j]!=res)
+        {
+            res = 2;
+            return res;
+        }
+    }
+    return res;
+}
+
+
+/**
+ * 
+ * 消除满行
+ * */
+void my_cleanfulllines(MAP m)
+{
+    unsigned int i = HEIGH-1;
+    for(i;i>0;i--)
+    {
+        switch (m->linestatus(i,m))
+        {
+        case 0:             //空行直接结束
+            return;
+            break;
+        case 1:
+            m->clearline(i,m);          //满行消除行
+            i++;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+/**
+ * 
+ * 将已经落到底的方块复制到舞台中
+ * */
+void my_drawblk(MAP m)
+{
+    unsigned int i=0,j=0;
+    for(i;i<4;i++)
+    {
+        for(j;j<4;j++)
+        {
+            m->stage[m->blk->addr[0]+i][m->blk->addr[1]+j]=SHAPES[m->blk->shape][m->blk->status][i][j];
+        }
+    }
+}
+
+/**
+ * 判断游戏是否结束
+ * */
+unsigned int my_gameover(MAP m)
+{
+    if(m->linestatus(4,m)!=0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+
+unsigned int init_map(MAP m)
+{
+    unsigned int i,j;
+    for(i=0;i<HEIGH;i++)
+    {
+        for(j;j<WIDTH;j++)
+        {
+            m->stage[i][j]=0;
+        }
+    }
+    m->change=my_change;
+    m->fall = my_fall;
+    m->iscollision=my_iscollection;
+    m->move = my_move;
+    m->movtognd=my_movtognd;
+    m->creatblk=my_creatblk;
+    m->clearline=my_clearline;
+    m->linestatus=my_linestatus;
+    m->clearfulllines=my_cleanfulllines;
+    m->drawblk = my_drawblk;
+    m->isover =my_gameover;
+}
 
 
 
+
+/**
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 将数据操作与图像，按键合并
+ * 
+ * 
+ * 
+ * 
+ * */
