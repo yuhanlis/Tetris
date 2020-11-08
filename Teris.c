@@ -544,6 +544,8 @@ void game(MAP m)
 int main(void)
 {
 	MAP m;
+	init_screen();
+	init_sharedmemory();
 	game(m);
 	return 0;
 }
