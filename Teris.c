@@ -17,9 +17,7 @@
 #include<termios.h>
 #include <sys/ipc.h>
 
-
-
-
+#include "game.h"
 
 #define KEY	8888
 #define SIZE	100
@@ -56,22 +54,26 @@
 #define C_RIGHT		( LCD_XSIZE - LCD_BLANK*2 )
 #define V_BLACK		( ( LCD_YSIZE - LCD_BLANK*4 ) / 6 )
 
+extern unsigned int SHAPES[7][4][4][4];
 //共享内存全局变量
 
 int id;//A,B共享内存文件句柄
 char* sharedMem = NULL;//A共享内存指针
+//LCD相关函数
+//所需全局变量
+struct fb_var_screeninfo fb_var;//当前缓冲区的可变参数，用于LCD的基地址显示
+struct fb_fix_screeninfo fb_fix;//固定参数，同上
+char* fb_base_addr = NULL;//映射的LCD基地址
+int display_fd;//lcd设备的文件句柄
+long int screensize = 0;//屏幕大小
 
+//按键相关全局变量
+int buttons_fd;
+char buttons[2]={'0','0'};
+char first_flag=0;
 
-
-//游戏逻辑所需变量
-unsigned int mapA[15][22];
-unsigned int mapB[15][22];
-unsigned int directionA=3;  //0 shang 1 xia 2zuo 3you
-unsigned int directionB=3;
-
-
-
-
+unsigned int directionA,directionB;
+//共享内存相关操作
 void init_sharedmemory(void)
 {
     id=shmget(KEY,SIZE,IPC_CREAT|0666);
@@ -79,8 +81,6 @@ void init_sharedmemory(void)
     memset(sharedMem,0x00,SIZE);
     
 }
-
-
 void getB() ///通过共享内存获取B运动方向
 {
     if(sharedMem[0]==NEW_DATA)
@@ -108,22 +108,7 @@ void getB() ///通过共享内存获取B运动方向
     }
 }
 
-
-
-
-
-//LCD相关函数
-//所需全局变量
-
-struct fb_var_screeninfo fb_var;//当前缓冲区的可变参数，用于LCD的基地址显示
-struct fb_fix_screeninfo fb_fix;//固定参数，同上
-char* fb_base_addr = NULL;//映射的LCD基地址
-int display_fd;//lcd设备的文件句柄
-long int screensize = 0;//屏幕大小
-
-
-
-
+//LCD相关操作
 void TFT_LCD_Test(void);//LCD测试程序
 //初始化屏幕
 void init_screen()
@@ -162,9 +147,6 @@ void init_screen()
     return;
     
 }
-
-
-
 
 //绘制点
 void draw_point(int x, int y, int color)//画点
@@ -302,12 +284,28 @@ void Glib_Line(int x1, int y1, int x2, int y2, int color)//画线
 		}
 	}
 }
-//绘制实心矩形
+
+//绘制实心带框矩形
 void Glib_FilledRectangle(int x1, int y1, int x2, int y2, int color)//填充矩形
 {
 	int i;
-	for (i = y1; i <= y2; i++)
-		Glib_Line(x1, i, x2, i, color);
+	for (i = y1+1; i <= y2-1; i++)
+		Glib_Line(x1+1, i, x2-1, i, color);
+    Glib_Line(x1,y1,x2,y1,BLACK);
+    Glib_Line(x1,y2,x2,y2,BLACK);
+    Glib_Line(x1,y1,x1,y2,BLACK);
+    Glib_Line(x2,y1,x2,y2,BLACK);
+}
+
+
+///绘制空心矩形
+void Glib_EmptyRectangle(int x1,int y1,int x2,int y2)
+{
+    int i;
+    Glib_Line(x1,y1,x2,y1,BLACK);
+    Glib_Line(x1,y2,x2,y2,BLACK);
+    Glib_Line(x1,y1,x1,y2,BLACK);
+    Glib_Line(x2,y1,x2,y2,BLACK);
 }
 //LCD测试程序
 void TFT_LCD_Test(void)//LCD测试程序
@@ -325,15 +323,8 @@ void TFT_LCD_Test(void)//LCD测试程序
 	Glib_FilledRectangle((LCD_BLANK * 2), (LCD_BLANK * 2 + V_BLACK * 5), (C_RIGHT), (LCD_BLANK * 2 + V_BLACK * 6), 0x07ff);		//fill a Rectangle with some color
 }
 
-
-
-
-
 //-----------按键相关函数--------------------
 
-int buttons_fd;
-char buttons[2]={'0','0'};
-char first_flag=0;
 
 
 void initbuttons()
@@ -352,9 +343,102 @@ void initbuttons()
 }
 
 
-void getA() //获取A的按键方向
+void delay(long time)
 {
-    char current_buttons[2];
+	long tmp = 25;
+	while( time-- )
+	{
+		while(tmp--); 
+		tmp = 25;
+	}
+}
+
+
+
+
+
+//游戏相关变量
+MAP gameA,gameB;
+
+//画出游戏方块池
+void Glib_Game(MAP m)
+{
+    unsigned int row = 4,column= 0;
+    for(row;row<HEIGH;row++)
+	{
+		for(column;column<WIDTH;column++)
+		{
+			if(m->stage[row][column])
+			{
+				Glib_FilledRectangle(column*LCD_BLANK,(row-4)*LCD_BLANK,(column+1)*LCD_BLANK,(row-3)*LCD_BLANK,BLUE);
+			}
+			else
+			{
+				Glib_EmptyRectangle(column*LCD_BLANK,(row-4)*LCD_BLANK,(column+1)*LCD_BLANK,(row-3)*LCD_BLANK);
+			}
+		}
+	}
+}
+
+
+/**
+ * 
+ * 画出方块
+ * 
+ * */
+void Glib_Blk(MAP m)
+{
+	unsigned int x = m->blk->addr[0]-4;
+	unsigned int y = m->blk->addr[1];
+	int color;
+	switch(m->blk->color)
+	{
+		case 0:
+			color = RED;
+			break;
+		case 1:
+			color = BLUE;
+			break;
+		case 2:
+			color = YELLOW;
+			break;
+		case 3:
+			color = GREEN;
+			break;
+		default:
+			color= BLACK;
+			break;	
+	}
+	unsigned int row = 0;
+	unsigned int column=0;
+	if(x>=4)
+	{
+		for(row;row<4;row++)
+			{
+				for(column;column<4;column++)
+					{
+						if(SHAPES[m->blk->shape][m->blk->shape][row][column])
+						{
+							Glib_FilledRectangle((x+column)*LCD_BLANK,(y+row)*LCD_BLANK,(x+column+1)*LCD_BLANK,(y+row+1)*LCD_BLANK,color);
+						}
+						else
+						{
+							Glib_EmptyRectangle((x+column)*LCD_BLANK,(y+row)*LCD_BLANK,(x+column+1)*LCD_BLANK,(y+row+1)*LCD_BLANK);
+						}
+					}
+			}
+	}
+}
+
+
+/**
+ * 
+ * 捕捉A按键，进行相关操作
+ * 
+ * */
+void getA(MAP m)
+{
+	char current_buttons[2];
     char realchar;
     if(read(buttons_fd,current_buttons,sizeof(current_buttons))!=sizeof(current_buttons))
     {
@@ -404,93 +488,62 @@ void getA() //获取A的按键方向
             switch (realchar)
             {
             case '2':
-                directionA=0;
+                m->change(m);
                 break;
             case '5':
-                directionA=1;
+                m->fall(m);
                 break;
             case '4':
-                directionA=2;
+                m->move(m,LEFT);
                 break;
             case '6':
-                directionA=3;
+				m->move(m,RIGHT);
                 break;
             
             default:
                 break;
     }
-
-
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void delay(long time)
+/**
+ * 
+ * 游戏整体逻辑
+ * 
+ * */
+void game(MAP m)
 {
-	long tmp = 25;
-	while( time-- )
+	init_map(m);
+	m->creatblk(m);
+	while(1)
 	{
-		while(tmp--); 
-		tmp = 25;
+		if(!m->movtognd(m))
+		{
+			m->fall(m);
+		}
+		if(m->movtognd(m))
+		{
+			m->drawblk(m);
+			m->clearfulllines(m);
+			if(m->isover(m))
+			{
+				break;
+			}
+			else
+			{
+				m->creatblk(m);
+			}
+			
+		}
+		Glib_Game(m);
+		Glib_Blk(m);
 	}
 }
 
 
-
-void clear(void)        //清空地图
+int main(void)
 {
-    
-
+	MAP m;
+	game(m);
+	return 0;
 }
-
-void Draw(void)         //显示在屏幕上
-{
-    
-}
-
-
-
-
-
-
-
-
-
-
-
-void game(void )
-{
-    //初始化设备和游戏资源
-    initbuttons();
-    init_sharedmemory();
-    init_screen();
-    initSnake();
-    Draw();
-
-    
-}
-	
-
-
-
-
-
-
-
-

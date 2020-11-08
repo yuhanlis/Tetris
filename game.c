@@ -2,140 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "game.h"
-#define HEIGH 27
-#define WIDTH 15
-#define CLK   1000  //降落速度
-
-#define SHAPE_L1 2
-#define SHAPE_I 6
-#define SHAPE_O 4
-#define SHAPE_S 0
-#define SHAPE_T 5
-#define SHAPE_Z 1
-#define SHAPE_L2 3
-
-#define DIR_UP 0;
-#define DIR_DO 1;
-#define DIR_LE 2;
-#define DIR_RE 3;
-
-#define LEFT 0;
-#define RIGHT 1;
-#define DOWN 2;
-#define CHANG 3;
-
-
-unsigned int mapA [HEIGH][WIDTH];
-unsigned int mapB [HEIGH][WIDTH];
-unsigned int SHAPES [7][4][4][4];
-
-typedef struct block* BLOCK;
-typedef struct map*  MAP;
-
-typedef    void (*pfunc_fall) (MAP);         //下落   
-typedef    void (*pfunc_change)(MAP);       //旋转
-typedef    void (*pfunc_move)(struct map*,unsigned int );       //移动
-typedef    unsigned int (*pfunc_iscollision)(unsigned int,MAP);   //判断移动后是否会碰撞
-typedef    unsigned int (*pfunc_movtognd)(MAP);  //判断是否落到底
-typedef    void (*pfunc_clearline)(unsigned int ,MAP);        //消除一行
-typedef    void (*pfunc_creatblk)(MAP);     //生成方块
-typedef    unsigned int (*pfunc_gameover)(MAP); //判断游戏是否结束
-typedef    unsigned int (*pfunc_linestatus)(unsigned int,MAP);   //判断一行状态
-typedef    unsigned int (*pfunc_drawblk)(MAP);  //显示游戏中唯一的方块
-typedef    unsigned int (*pfunc_clearfulllines)(MAP);   //清除所有满行
-
-
-
-
-
-
-
-
-void delay_ms(unsigned int time_ms);    //延时函数(毫秒)
-
-SHAPES = 
-{
-    {
-    { { 0,1,1,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,0,0,0 },{ 1,1,0,0 },{ 0,1,0,0 },{ 0,0,0,0 } },
-    { { 0,1,1,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,0,0,0 },{ 1,1,0,0 },{ 0,1,0,0 },{ 0,0,0,0 } }
-    }
-    ,
-    {
-    { { 1,1,0,0 },{ 0,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 0,1,0,0 },{ 1,1,0,0 },{ 1,0,0,0 },{ 0,0,0,0 } },
-    { { 1,1,0,0 },{ 0,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 0,1,0,0 },{ 1,1,0,0 },{ 1,0,0,0 },{ 0,0,0,0 } }
-    }
-    ,
-    {
-    { { 1,1,1,0 },{ 1,0,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,0,0,0 },{ 1,0,0,0 },{ 1,1,0,0 },{ 0,0,0,0 } },
-    { { 0,0,1,0 },{ 1,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,1,0,0 },{ 0,1,0,0 },{ 0,1,0,0 },{ 0,0,0,0 } }
-    }
-    ,
-    {
-    { { 1,1,1,0 },{ 0,0,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,1,0,0 },{ 1,0,0,0 },{ 1,0,0,0 },{ 0,0,0,0 } },
-    { { 1,0,0,0 },{ 1,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 0,1,0,0 },{ 0,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 } }
-    }
-    ,
-    {
-    { { 1,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,1,0,0 },{ 1,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } }
-    }
-    ,
-    {
-    { { 0,1,0,0 },{ 1,1,1,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 0,1,0,0 },{ 1,1,0,0 },{ 0,1,0,0 },{ 0,0,0,0 } },
-    { { 1,1,1,0 },{ 0,1,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,0,0,0 },{ 1,1,0,0 },{ 1,0,0,0 },{ 0,0,0,0 } }
-    }
-    ,
-    {
-    { { 1,1,1,1 },{ 0,0,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,0,0,0 },{ 1,0,0,0 },{ 1,0,0,0 },{ 1,0,0,0 } },
-    { { 1,1,1,1 },{ 0,0,0,0 },{ 0,0,0,0 },{ 0,0,0,0 } },
-    { { 1,0,0,0 },{ 1,0,0,0 },{ 1,0,0,0 },{ 1,0,0,0 } }
-    }
-    };
-
-
-struct map
-{
-    unsigned int stage[HEIGH][WIDTH];
-    BLOCK blk;
-    pfunc_change change;
-    pfunc_fall fall;
-    pfunc_iscollision iscollision;
-    pfunc_move  move;
-    pfunc_movtognd movtognd;
-
-
-
-
-    pfunc_creatblk creatblk;
-    pfunc_clearline clearline;
-    pfunc_linestatus linestatus;
-    pfunc_clearfulllines clearfulllines;
-    pfunc_drawblk drawblk;
-    pfunc_gameover isover;
-
-};
-
-struct block
-{
-    unsigned int shape;
-    unsigned int status;
-    unsigned int addr[2];
-    
-};
-
+extern unsigned int SHAPES[7][4][4][4];
 /**
  * 
  *方块下落函数 
@@ -155,7 +22,7 @@ void my_fall(MAP m)
  * */
 void my_change(MAP m)
 {
-    if(!m->iscollision(3,m))
+    if(!m->iscollision(m,3))
     {
         m->blk->status=(m->blk->status+1)%4;
     }
@@ -167,7 +34,7 @@ void my_change(MAP m)
  * */
 void my_move(MAP m,unsigned int dir)
 {
-    if(!m->iscollision(dir,m))
+    if(!m->iscollision(m,dir))
     {
         if(dir==0)
         {
@@ -189,7 +56,7 @@ unsigned int my_iscollection(MAP m,unsigned int act)
 {
     unsigned int x= m->blk->addr[0];
     unsigned int y= m->blk->addr[1];
-    unsigned int ** shape =SHAPES[m->blk->shape][m->blk->status];
+    unsigned int ** shape =(unsigned int **)SHAPES[m->blk->shape][m->blk->status];
     unsigned int res = 0;
     switch(act)
     {
@@ -200,7 +67,7 @@ unsigned int my_iscollection(MAP m,unsigned int act)
             x+=1;
             break;
         case 3:
-            shape =SHAPES[m->blk->shape][(m->blk->status+1)%4];
+            shape =(unsigned int **)SHAPES[m->blk->shape][(m->blk->status+1)%4];
             break;
         default:
             break;
@@ -237,7 +104,7 @@ unsigned int my_movtognd(MAP m)
 {
     unsigned int x= m->blk->addr[0];
     unsigned int y= m->blk->addr[1];
-    unsigned int ** shape =SHAPES[m->blk->shape][m->blk->status];
+    unsigned int ** shape =(unsigned int **)SHAPES[m->blk->shape][m->blk->status];
     unsigned int res = 0;
     unsigned int i,j;
     for(i=0;i<4;i++)
@@ -245,11 +112,13 @@ unsigned int my_movtognd(MAP m)
         if((m->stage[x+i][y+3]==1&&shape[i][3]==1))
         {
             res = 1;
+            free(m->blk);
             return res;
         }
         if(shape[i][3]==1&&y+3>=HEIGH)
         {
             res=1;
+            free(m->blk);
             return res;
         }
     }
@@ -263,15 +132,17 @@ unsigned int my_movtognd(MAP m)
  * */
 void my_creatblk(MAP m)
 {
-    unsigned int shape_random,status_random;    //随机数
+    unsigned int shape_random,status_random,color_random;    //随机数
     BLOCK block_temp = (BLOCK)malloc(sizeof(struct block));
     srand((unsigned int)time(NULL));
     shape_random=rand()%7;
     status_random=rand()%4;
+    color_random = rand()%5;
     block_temp->shape=shape_random;
     block_temp->status=status_random;
     block_temp->addr[0]=0;
     block_temp->addr[1]=WIDTH/2;
+    block_temp->color=color_random;
     m->blk=block_temp;
 }
 
@@ -282,13 +153,14 @@ void my_clearline(unsigned int  line,MAP m)
 {
     unsigned int i = line;
     unsigned int j=0;
-    for(i;i-1>0&&m->linestatus(i,m)!=1;i--)
+    for(i;i-1>0&&m->linestatus(i,m)!=0;i--)
     {
         for(j=0;j<WIDTH;j++)
         {
             m->stage[i][j]=m->stage[i-1][j];
         }
     }
+    m->scores+=1;
 }
 
 /**
@@ -348,6 +220,7 @@ void my_cleanfulllines(MAP m)
  * */
 void my_drawblk(MAP m)
 {
+    
     unsigned int i=0,j=0;
     for(i;i<4;i++)
     {
@@ -373,6 +246,7 @@ unsigned int my_gameover(MAP m)
 
 unsigned int init_map(MAP m)
 {
+    m=(MAP)malloc(sizeof(struct map));
     unsigned int i,j;
     for(i=0;i<HEIGH;i++)
     {
@@ -392,6 +266,7 @@ unsigned int init_map(MAP m)
     m->clearfulllines=my_cleanfulllines;
     m->drawblk = my_drawblk;
     m->isover =my_gameover;
+    m->scores= 0;
 }
 
 
