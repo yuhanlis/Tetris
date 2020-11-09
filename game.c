@@ -12,10 +12,9 @@ void my_fall(MAP m)
 {
     if(!m->movtognd(m))
     {
-        m->blk->addr[1]+=1;
+        m->blk.addr[1]+=1;
     }
 }
-
 /**
  * 
  * 改变方块形状
@@ -24,7 +23,7 @@ void my_change(MAP m)
 {
     if(!m->iscollision(m,3))
     {
-        m->blk->status=(m->blk->status+1)%4;
+        m->blk.status=(m->blk.status+1)%4;
     }
 }
 
@@ -38,11 +37,11 @@ void my_move(MAP m,unsigned int dir)
     {
         if(dir==0)
         {
-            m->blk->addr[0]-=1;
+            m->blk.addr[0]-=1;
         }
         else if(dir==1)
         {
-            m->blk->addr[0]+=1;
+            m->blk.addr[0]+=1;
         }
     }
 }
@@ -54,9 +53,9 @@ void my_move(MAP m,unsigned int dir)
  * */
 unsigned int my_iscollection(MAP m,unsigned int act)
 {
-    unsigned int x= m->blk->addr[0];
-    unsigned int y= m->blk->addr[1];
-    unsigned int ** shape =(unsigned int **)SHAPES[m->blk->shape][m->blk->status];
+    unsigned int x= m->blk.addr[0];
+    unsigned int y= m->blk.addr[1];
+    unsigned int ** shape =(unsigned int **)SHAPES[m->blk.shape][m->blk.status];
     unsigned int res = 0;
     switch(act)
     {
@@ -67,7 +66,7 @@ unsigned int my_iscollection(MAP m,unsigned int act)
             x+=1;
             break;
         case 3:
-            shape =(unsigned int **)SHAPES[m->blk->shape][(m->blk->status+1)%4];
+            shape =(unsigned int **)SHAPES[m->blk.shape][(m->blk.status+1)%4];
             break;
         default:
             break;
@@ -102,23 +101,20 @@ unsigned int my_iscollection(MAP m,unsigned int act)
  * */
 unsigned int my_movtognd(MAP m)
 {
-    unsigned int x= m->blk->addr[0];
-    unsigned int y= m->blk->addr[1];
-    unsigned int ** shape =(unsigned int **)SHAPES[m->blk->shape][m->blk->status];
+    unsigned int x= m->blk.addr[0];
+    unsigned int y= m->blk.addr[1];
     unsigned int res = 0;
     unsigned int i,j;
     for(i=0;i<4;i++)
     {
-        if((m->stage[x+i][y+3]==1&&shape[i][3]==1))
+        if((m->stage[x+i][y+3]==1&&SHAPES[m->blk.shape][m->blk.status][i][3]==1))
         {
             res = 1;
-            free(m->blk);
             return res;
         }
-        if(shape[i][3]==1&&y+3>=HEIGH)
+        if(SHAPES[m->blk.shape][m->blk.status][i][3]==1&&y+3>=HEIGH)
         {
             res=1;
-            free(m->blk);
             return res;
         }
     }
@@ -133,16 +129,16 @@ unsigned int my_movtognd(MAP m)
 void my_creatblk(MAP m)
 {
     unsigned int shape_random,status_random,color_random;    //随机数
-    BLOCK block_temp = (BLOCK)malloc(sizeof(struct block));
+    BLOCK block_temp;
     srand((unsigned int)time(NULL));
     shape_random=rand()%7;
     status_random=rand()%4;
     color_random = rand()%5;
-    block_temp->shape=shape_random;
-    block_temp->status=status_random;
-    block_temp->addr[0]=0;
-    block_temp->addr[1]=WIDTH/2;
-    block_temp->color=color_random;
+    block_temp.shape=shape_random;
+    block_temp.status=status_random;
+    block_temp.addr[0]=WIDTH/2;
+    block_temp.addr[1]=0;
+    block_temp.color=color_random;
     m->blk=block_temp;
 }
 
@@ -153,7 +149,7 @@ void my_clearline(unsigned int  line,MAP m)
 {
     unsigned int i = line;
     unsigned int j=0;
-    for(i;i-1>0&&m->linestatus(i,m)!=0;i--)
+    for(i=line;i-1>0&&m->linestatus(i,m)!=0;i--)
     {
         for(j=0;j<WIDTH;j++)
         {
@@ -197,7 +193,7 @@ unsigned int  my_linestatus(unsigned int line,MAP m)
 void my_cleanfulllines(MAP m)
 {
     unsigned int i = HEIGH-1;
-    for(i;i>0;i--)
+    for(i=0;i>0;i--)
     {
         switch (m->linestatus(i,m))
         {
@@ -222,11 +218,11 @@ void my_drawblk(MAP m)
 {
     
     unsigned int i=0,j=0;
-    for(i;i<4;i++)
+    for(i=0;i<4;i++)
     {
-        for(j;j<4;j++)
+        for(j=0;j<4;j++)
         {
-            m->stage[m->blk->addr[0]+i][m->blk->addr[1]+j]=SHAPES[m->blk->shape][m->blk->status][i][j];
+            m->stage[m->blk.addr[0]+i][m->blk.addr[1]+j]=SHAPES[m->blk.shape][m->blk.status][i][j];
         }
     }
 }
@@ -236,6 +232,7 @@ void my_drawblk(MAP m)
  * */
 unsigned int my_gameover(MAP m)
 {
+    printf("ininininininini");
     if(m->linestatus(4,m)!=0)
     {
         return 1;
@@ -246,11 +243,17 @@ unsigned int my_gameover(MAP m)
 
 unsigned int init_map(MAP m)
 {
-    m=(MAP)malloc(sizeof(struct map));
+    
+    // m=(MAP)malloc(sizeof(struct map));
+    // if(m==NULL)
+    // {
+    //     printf("ERROR can't malloc");
+    //     return;
+    // }
     unsigned int i,j;
     for(i=0;i<HEIGH;i++)
     {
-        for(j;j<WIDTH;j++)
+        for(j=0;j<WIDTH;j++)
         {
             m->stage[i][j]=0;
         }

@@ -306,6 +306,9 @@ void Glib_EmptyRectangle(int x1,int y1,int x2,int y2)
     Glib_Line(x1,y2,x2,y2,BLACK);
     Glib_Line(x1,y1,x1,y2,BLACK);
     Glib_Line(x2,y1,x2,y2,BLACK);
+	for (i = y1+1; i <= y2-1; i++)
+		Glib_Line(x1+1, i, x2-1, i, WHITE);
+
 }
 //LCD测试程序
 void TFT_LCD_Test(void)//LCD测试程序
@@ -363,18 +366,19 @@ MAP gameA,gameB;
 //画出游戏方块池
 void Glib_Game(MAP m)
 {
-    unsigned int row = 4,column= 0;
-    for(row;row<HEIGH;row++)
+    unsigned int row = 0;
+	unsigned int column= 0;
+    for(row=0;row<HEIGH;row++)
 	{
-		for(column;column<WIDTH;column++)
+		for(column=0;column<WIDTH;column++)
 		{
-			if(m->stage[row][column])
+			if(m->stage[row][column]==1)
 			{
-				Glib_FilledRectangle(column*LCD_BLANK,(row-4)*LCD_BLANK,(column+1)*LCD_BLANK,(row-3)*LCD_BLANK,BLUE);
+				Glib_FilledRectangle(column*LCD_BLANK,(row)*LCD_BLANK,(column+1)*LCD_BLANK,(row+1)*LCD_BLANK,BLUE);
 			}
 			else
 			{
-				Glib_EmptyRectangle(column*LCD_BLANK,(row-4)*LCD_BLANK,(column+1)*LCD_BLANK,(row-3)*LCD_BLANK);
+				Glib_EmptyRectangle(column*LCD_BLANK,(row)*LCD_BLANK,(column+1)*LCD_BLANK,(row+1)*LCD_BLANK);
 			}
 		}
 	}
@@ -388,10 +392,10 @@ void Glib_Game(MAP m)
  * */
 void Glib_Blk(MAP m)
 {
-	unsigned int x = m->blk->addr[0]-4;
-	unsigned int y = m->blk->addr[1];
+	unsigned int x = m->blk.addr[0];
+	unsigned int y = m->blk.addr[1];
 	int color;
-	switch(m->blk->color)
+	switch(m->blk.color)
 	{
 		case 0:
 			color = RED;
@@ -413,11 +417,11 @@ void Glib_Blk(MAP m)
 	unsigned int column=0;
 	if(x>=4)
 	{
-		for(row;row<4;row++)
+		for(row=0;row<4;row++)
 			{
-				for(column;column<4;column++)
+				for(column=0;column<4;column++)
 					{
-						if(SHAPES[m->blk->shape][m->blk->shape][row][column])
+						if(SHAPES[m->blk.shape][m->blk.shape][row][column])
 						{
 							Glib_FilledRectangle((x+column)*LCD_BLANK,(y+row)*LCD_BLANK,(x+column+1)*LCD_BLANK,(y+row+1)*LCD_BLANK,color);
 						}
@@ -514,9 +518,9 @@ void getA(MAP m)
 void game(MAP m)
 {
 	init_map(m);
-	m->creatblk(m);
 	while(1)
 	{
+		getA(m);
 		if(!m->movtognd(m))
 		{
 			m->fall(m);
@@ -527,6 +531,7 @@ void game(MAP m)
 			m->clearfulllines(m);
 			if(m->isover(m))
 			{
+				printf("over");
 				break;
 			}
 			else
@@ -537,15 +542,36 @@ void game(MAP m)
 		}
 		Glib_Game(m);
 		Glib_Blk(m);
+		delay(1000*1000);
 	}
 }
 
 
+void Draw(void)         //显示在屏幕上
+{
+    int i,j;
+    for(i=0;i<40;i++)
+    {
+        for(j=0;j<24;j++)
+        {
+            Glib_EmptyRectangle(i*LCD_BLANK,j*LCD_BLANK,(i+1)*LCD_BLANK,(j+1)*LCD_BLANK);
+        }
+    }
+    return;
+}
+
 int main(void)
 {
-	MAP m;
+	struct map m;
+	initbuttons();
+	printf("buttons init\n");
 	init_screen();
+	//TFT_LCD_Test();
+	printf("screen inited\n");
 	init_sharedmemory();
-	game(m);
+	printf("shared memory inited\n");
+	game(&m);
+	
+	//Draw();
 	return 0;
 }

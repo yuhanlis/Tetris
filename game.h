@@ -1,5 +1,5 @@
-#define HEIGH 27
-#define WIDTH 15
+#define HEIGH 24
+#define WIDTH 40
 #define CLK   1000  //降落速度
 
 #define SHAPE_L1 2
@@ -25,7 +25,7 @@ unsigned int mapA [HEIGH][WIDTH];
 unsigned int mapB [HEIGH][WIDTH];
 
 
-typedef struct block* BLOCK;
+typedef struct block BLOCK;
 typedef struct map*  MAP;
 
 typedef    void (*pfunc_fall) (MAP);         //下落   
@@ -102,6 +102,14 @@ static unsigned int SHAPES [7][4][4][4]=
     };
 
 
+struct block
+{
+    unsigned int shape;
+    unsigned int status;
+    unsigned int addr[2];
+    unsigned int color;
+    
+};
 struct map
 {
     unsigned int stage[HEIGH][WIDTH];
@@ -125,11 +133,3 @@ struct map
 
 };
 
-struct block
-{
-    unsigned int shape;
-    unsigned int status;
-    unsigned int addr[2];
-    unsigned int color;
-    
-};
