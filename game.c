@@ -67,7 +67,7 @@ unsigned int my_iscollection(MAP m,unsigned int act)
             x+=1;
             break;
         case 3:
-            shape =(shape+1)%4;
+            status =(status+1)%4;
             break;
         default:
             break;
@@ -81,7 +81,7 @@ unsigned int my_iscollection(MAP m,unsigned int act)
     {
         for(j=0;j<4;j++)
         {
-            if(m->stage[x+i][y+j]==1&&SHAPES[shape][status][i][j]==1)
+            if(m->stage[y+i][x+j]==1&&SHAPES[shape][status][i][j]==1)
             {
                 res = 1;
                 return res;
@@ -106,25 +106,34 @@ unsigned int my_movtognd(MAP m)
     unsigned int y= m->blk.addr[1];
     unsigned int res = 0;
     unsigned int i;
-    unsigned int j = 3;
+    int j = 3;
     for(j=3;j>=0;j--)
     {
+        if(y+j==HEIGH)
+        {
+            res = 1;
+            return res;
+        }
+        
+        if((y+j)<=HEIGH-1)
+        {
         for(i=0;i<4&&x+i<WIDTH;i++)
             {
-                if(SHAPES[m->blk.shape][m->blk.status][i][j]==1)
-                    {
-                        if((y+j)>HEIGH)
+                if(SHAPES[m->blk.shape][m->blk.status][j][i]==1)
+                {
+                        if((y+j)==HEIGH-1)
                         {
                             res=1;
                             return res;
                         }
-                        if(m->stage[x+i][y+j])
+                        if(((y+j+1)<=(HEIGH-1)&&m->stage[y+j+1][x+i])==1)
                         {
                             res=1;
                             return res;
                         }
                     }
             }
+        }
     }
         return res;
 }
@@ -179,7 +188,11 @@ void my_clearline(unsigned int  line,MAP m)
 unsigned int  my_linestatus(unsigned int line,MAP m)
 {
     unsigned int j =0 ;
-    unsigned int res = (m->stage[line][0]==1);
+    unsigned int res = 0;
+    if(m->stage[line][0]==1)
+    {
+        res = 1;
+    }
     if(line<0||line>=HEIGH)
     return 3;
     for(j=1;j<WIDTH;j++)
@@ -201,7 +214,7 @@ unsigned int  my_linestatus(unsigned int line,MAP m)
 void my_cleanfulllines(MAP m)
 {
     unsigned int i = HEIGH-1;
-    for(i=0;i>0;i--)
+    for(i=HEIGH-1;i>0;i--)
     {
         switch (m->linestatus(i,m))
         {
@@ -230,9 +243,11 @@ void my_drawblk(MAP m)
     {
         for(j=0;j<4;j++)
         {
-            m->stage[m->blk.addr[0]+i][m->blk.addr[1]+j]=SHAPES[m->blk.shape][m->blk.status][i][j];
+            if(SHAPES[m->blk.shape][m->blk.status][i][j]==1)
+            m->stage[m->blk.addr[1]+i][m->blk.addr[0]+j]=SHAPES[m->blk.shape][m->blk.status][i][j];
         }
     }
+    
 }
 
 /**

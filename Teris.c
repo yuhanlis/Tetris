@@ -289,12 +289,12 @@ void Glib_Line(int x1, int y1, int x2, int y2, int color)//画线
 void Glib_FilledRectangle(int x1, int y1, int x2, int y2, int color)//填充矩形
 {
 	int i;
-	for (i = y1+1; i <= y2-1; i++)
-		Glib_Line(x1+1, i, x2-1, i, color);
-    Glib_Line(x1,y1,x2,y1,BLACK);
+	Glib_Line(x1,y1,x2,y1,BLACK);
     Glib_Line(x1,y2,x2,y2,BLACK);
     Glib_Line(x1,y1,x1,y2,BLACK);
     Glib_Line(x2,y1,x2,y2,BLACK);
+	for (i = y1+1; i <= y2-1; i++)
+		Glib_Line(x1+1, i, x2-1, i, color);
 }
 
 
@@ -507,6 +507,7 @@ void getA(MAP m)
             default:
                 break;
     }
+
 }
 
 
@@ -518,14 +519,15 @@ void getA(MAP m)
 void game(MAP m)
 {
 	init_map(m);
+	m->creatblk(m);
 	while(1)
 	{
 		getA(m);
-		if(!m->movtognd(m))
+		if(m->movtognd(m)==0)
 		{
 			m->fall(m);
 		}
-		if(m->movtognd(m))
+		else if(m->movtognd(m)!=0)
 		{
 			m->drawblk(m);
 			m->clearfulllines(m);
@@ -535,15 +537,11 @@ void game(MAP m)
 				printf("Scode:%d\n",m->scores);
 				break;
 			}
-			else
-			{
-				m->creatblk(m);
-			}
-			
+			m->creatblk(m);
 		}
 		Glib_Game(m);
 		Glib_Blk(m);
-		delay(1000*500);
+		delay(1000*300);
 	}
 }
 
@@ -560,6 +558,66 @@ void Draw(void)         //显示在屏幕上
     }
     return;
 }
+void test(MAP m)
+{
+	init_map(m);
+	m->creatblk;
+	m->blk.addr[0]=20;
+	m->blk.addr[1]=0;
+	m->blk.shape=0;
+	m->blk.status=0;
+	m->drawblk(m);
+
+	m->creatblk;
+	m->blk.addr[0]=20;
+	m->blk.addr[1]=0;
+	m->blk.shape=0;
+	m->blk.status=0;
+	m->drawblk(m);
+
+	m->creatblk;
+	m->blk.addr[0]=20;
+	m->blk.addr[1]=4;
+	m->blk.shape=1;
+	m->blk.status=0;
+	m->drawblk(m);
+
+	m->creatblk;
+	m->blk.addr[0]=20;
+	m->blk.addr[1]=8;
+	m->blk.shape=2;
+	m->blk.status=0;
+	m->drawblk(m);
+
+	m->creatblk;
+	m->blk.addr[0]=20;
+	m->blk.addr[1]=12;
+	m->blk.shape=3;
+	m->blk.status=0;
+	m->drawblk(m);
+
+	m->creatblk;
+	m->blk.addr[0]=20;
+	m->blk.addr[1]=16;
+	m->blk.shape=4;
+	m->blk.status=0;
+	m->drawblk(m);
+
+	m->creatblk;
+	m->blk.addr[0]=20;
+	m->blk.addr[1]=20;
+	m->blk.shape=5;
+	m->blk.status=0;
+	m->drawblk(m);
+
+	m->creatblk;
+	m->blk.addr[0]=24;
+	m->blk.addr[1]=0;
+	m->blk.shape=6;
+	m->blk.status=0;
+	m->drawblk(m);
+	Glib_Game(m);
+}
 
 int main(void)
 {
@@ -572,7 +630,7 @@ int main(void)
 	init_sharedmemory();
 	printf("shared memory inited\n");
 	game(&m);
-	
+	//test(&m);
 	//Draw();
 	return 0;
 }
