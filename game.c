@@ -55,7 +55,8 @@ unsigned int my_iscollection(MAP m,unsigned int act)
 {
     unsigned int x= m->blk.addr[0];
     unsigned int y= m->blk.addr[1];
-    unsigned int ** shape =(unsigned int **)SHAPES[m->blk.shape][m->blk.status];
+    unsigned int shape = m->blk.shape;
+    unsigned int status=m->blk.status;
     unsigned int res = 0;
     switch(act)
     {
@@ -66,7 +67,7 @@ unsigned int my_iscollection(MAP m,unsigned int act)
             x+=1;
             break;
         case 3:
-            shape =(unsigned int **)SHAPES[m->blk.shape][(m->blk.status+1)%4];
+            shape =(shape+1)%4;
             break;
         default:
             break;
@@ -80,12 +81,12 @@ unsigned int my_iscollection(MAP m,unsigned int act)
     {
         for(j=0;j<4;j++)
         {
-            if(m->stage[x+i][y+j]==1&&shape[i][j]==1)
+            if(m->stage[x+i][y+j]==1&&SHAPES[shape][status][i][j]==1)
             {
                 res = 1;
                 return res;
             }
-            if(shape[i][j]==1&&x+i>=WIDTH)
+            if(SHAPES[shape][status][i][j]==1&&x+i>=WIDTH)
             {
                 res =1;
                 return res;
@@ -104,21 +105,28 @@ unsigned int my_movtognd(MAP m)
     unsigned int x= m->blk.addr[0];
     unsigned int y= m->blk.addr[1];
     unsigned int res = 0;
-    unsigned int i,j;
-    for(i=0;i<4;i++)
+    unsigned int i;
+    unsigned int j = 3;
+    for(j=3;j>=0;j--)
     {
-        if((m->stage[x+i][y+3]==1&&SHAPES[m->blk.shape][m->blk.status][i][3]==1))
-        {
-            res = 1;
-            return res;
-        }
-        if(SHAPES[m->blk.shape][m->blk.status][i][3]==1&&y+3>=HEIGH)
-        {
-            res=1;
-            return res;
-        }
+        for(i=0;i<4&&x+i<WIDTH;i++)
+            {
+                if(SHAPES[m->blk.shape][m->blk.status][i][j]==1)
+                    {
+                        if((y+j)>HEIGH)
+                        {
+                            res=1;
+                            return res;
+                        }
+                        if(m->stage[x+i][y+j])
+                        {
+                            res=1;
+                            return res;
+                        }
+                    }
+            }
     }
-    return res;
+        return res;
 }
 
 /**
@@ -171,7 +179,7 @@ void my_clearline(unsigned int  line,MAP m)
 unsigned int  my_linestatus(unsigned int line,MAP m)
 {
     unsigned int j =0 ;
-    unsigned int res = m->stage[line][0]==1;
+    unsigned int res = (m->stage[line][0]==1);
     if(line<0||line>=HEIGH)
     return 3;
     for(j=1;j<WIDTH;j++)
@@ -232,8 +240,7 @@ void my_drawblk(MAP m)
  * */
 unsigned int my_gameover(MAP m)
 {
-    printf("ininininininini");
-    if(m->linestatus(4,m)!=0)
+    if(m->linestatus(0,m)!=0)
     {
         return 1;
     }

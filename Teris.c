@@ -531,7 +531,8 @@ void game(MAP m)
 			m->clearfulllines(m);
 			if(m->isover(m))
 			{
-				printf("over");
+				printf("over\n");
+				printf("Scode:%d\n",m->scores);
 				break;
 			}
 			else
@@ -542,7 +543,7 @@ void game(MAP m)
 		}
 		Glib_Game(m);
 		Glib_Blk(m);
-		delay(1000*1000);
+		delay(1000*500);
 	}
 }
 
